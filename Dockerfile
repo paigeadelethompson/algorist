@@ -12,10 +12,6 @@ ENV SANDBOX_PROCESSOR_BIND_HOST=tcp://127.0.0.1:19818
 
 ENV REQUEST_PROCESSOR_BIND_HOST=tcp://127.0.0.1:19819
 
-ENV DISCORD_APP_ID=1305197668036771912
-
-ENV DISCORD_PUBLIC_KEY=1432cbf936bd40307aefdca6421bd4ace70edc63b764cdbcab9daeaf1c0e691b
-
 RUN apt -y update
 
 RUN apt -y install python-is-python3 python3-poetry python3-pip

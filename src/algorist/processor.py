@@ -27,6 +27,7 @@ import string
 from random import random
 import aiohttp
 import aiozmq
+from aiozmq import rpc
 import pyaes
 from tinydb import TinyDB, Query
 import os
@@ -84,7 +85,7 @@ class ConfigDB:
         encrypted += self.encrypt.feed()
         return b64encode(encrypted)
 
-class TornV2API(aiozmq.rpc.AttrHandler):
+class TornV2API(rpc.AttrHandler):
     def __init__(self, db: ConfigDB):
         self._base_url = "https://api.torn.com/v2"
         self.db = db

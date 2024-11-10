@@ -26,7 +26,7 @@ import os, statistics, math
 from aiozmq.rpc import AttrHandler, serve_rpc, method
 from RestrictedPython import compile_restricted, safe_builtins
 import numpy, pandas, matplotlib, itertools
-import user, faction
+import algorist.user, algorist.faction
 
 class ExecutionContext:
     async def hash_id(guild, channel):

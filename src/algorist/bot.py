@@ -30,7 +30,8 @@ from aiozmq.rpc import connect_rpc
 
 class Algorist(discord.Client):
     def __init__(self):
-        super().__init__()
+        intents = discord.Intents.default()
+        super().__init__(intents=intents)
     async def on_ready(self):
         print(f'Logged in as {self.user}')
 
@@ -42,13 +43,14 @@ class Algorist(discord.Client):
     async def e(self, ctx):
         if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
             raise Exception('SANDBOX_PROCESSOR_BIND_HOST is not set')
-        try:
-            client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
-            ret = await client.call.execute(ctx.guild.id, ctx.channel.id, ctx.message.content)
-            client.close()
-            await client.wait_closed()
-        except:
-            pass
+        if ctx.author.guild_permissions.administrator:
+            try:
+                client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+                ret = await client.call.execute(ctx.guild.id, ctx.channel.id, ctx.message.content)
+                client.close()
+                await client.wait_closed()
+            except:
+                pass
 
 class BotProcessor(aiozmq.rpc.AttrHandler):
     def __init__(self, bot: Algorist):
@@ -71,7 +73,7 @@ class BotProcessor(aiozmq.rpc.AttrHandler):
     def send_private_message_to_user(self, user: str, data):
         raise NotImplementedError()
 
-async def inbox(self, bot: Algorist):
+async def inbox(bot: Algorist):
     if os.environ.get("BOT_PROCESSOR_BIND_HOST") is None:
         raise Exception("BOT_PROCESSOR_BIND_HOST not set")
     bind_host = os.environ.get("BOT_PROCESSOR_BIND_HOST")

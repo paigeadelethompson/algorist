@@ -24,16 +24,19 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import asyncio
 import os
-from processor import inbox as processor_inbox
-from sandbox import inbox as sandbox_inbox
-from bot import Algorist, BotProcessor
+
+from algorist.processor import inbox as processor_inbox
+from algorist.sandbox import inbox as sandbox_inbox
+from algorist.bot import Algorist, BotProcessor
+from algorist.bot import inbox as bot_inbox
 
 async def _bot():
     b = Algorist()
+
     async with asyncio.TaskGroup() as tg:
         await asyncio.gather(
-            bot.start(os.environ.get("DISCORD_TOKEN")),
-            tg.create_task(BotProcessor(b)))
+            b.start(os.environ.get("DISCORD_TOKEN")),
+            tg.create_task(bot_inbox(bot=b)))
 
 async def _insecure():
     async with asyncio.TaskGroup() as tg:
@@ -45,13 +48,13 @@ async def _insecure():
             tg.create_task(_bot()))
 
 def insecure():
-    asyncio.get_event_loop().run(_insecure())
+    asyncio.get_event_loop().run_until_complete(_insecure())
 
 def bot():
-    asyncio.run(_bot())
+    asyncio.get_event_loop().run_until_complete(_bot())
 
 def processor():
-    asyncio.run(processor_inbox())
+    asyncio.get_event_loop().run_until_complete(processor_inbox())
 
 def sandbox():
-    asyncio.run(sandbox_inbox())
+    asyncio.get_event_loop().run_until_complete(sandbox_inbox())
