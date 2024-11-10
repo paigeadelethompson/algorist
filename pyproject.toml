@@ -5,6 +5,7 @@ description = ""
 authors = ["Paige Thompson <paige@paige.bio>"]
 license = "MIT"
 readme = "README.md"
+packages = [{include="algorist", from="src"}]
 
 [tool.poetry.dependencies]
 python = ">=3.13,<3.14"
@@ -23,3 +24,9 @@ restrictedpython = "^7.4"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+algorist-insecure = "algorist.run:insecure"
+algorist-processor = "algorist.run:processor"
+algorist-bot = "algorist.run:bot"
+algorist-sandbox = "algorist.run:sandbox"

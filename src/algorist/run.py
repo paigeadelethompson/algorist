@@ -39,3 +39,12 @@ async def _insecure():
 
 def insecure():
     asyncio.get_event_loop().run_until_complete(_insecure())
+
+def bot():
+    raise NotImplementedError()
+
+def processor():
+    raise NotImplementedError()
+
+def sandbox():
+    raise NotImplementedError()

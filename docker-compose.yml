@@ -1,0 +1,38 @@
+services:
+  sandbox:
+    hostname: algorist_sandbox
+    command: algorist-sandbox
+    environment:
+      SANDBOX_PROCESSOR_BIND_HOST: ${SANDBOX_PROCESSOR_BIND_HOST}
+      REQUEST_PROCESSOR_BIND_HOST: "tcp://algorist_processor:19819"
+    build: .
+    volumes:
+      - user:/srv/algorist/db/user
+      - faction:/srv/algorist/db/faction
+  bot:
+    hostname: algorist_bot
+    command: algorist-bot
+    environment:
+      SANDBOX_PROCESSOR_BIND_HOST: "tcp://algorist_sandbox:19818"
+      REQUEST_PROCESSOR_BIND_HOST: "tcp://algorist_processor:19819"
+      DISCORD_TOKEN: ${DISCORD_TOKEN}
+    build: .
+    volumes: 
+      - bot_config:/srv/algorist/db/config
+  processor:
+    hostname: algorist_processor
+    command: algorist-processor
+    environment:
+      REQUEST_PROCESSOR_BIND_HOST: ${REQUEST_PROCESSOR_BIND_HOST}
+    image: .
+    volumes:
+      - processor_config:/srv/algorist/db/config
+volumes:
+  user:
+    name: algorist_user_databases
+  faction: 
+    name: algorist_faction_databases
+  processor_config:
+    name: algorist_processor_config_database
+  bot_config
+    name: algorist_bot_config_database
