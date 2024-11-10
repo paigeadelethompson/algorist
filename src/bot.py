@@ -21,9 +21,11 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
+import os
 
 import discord
 from discord.ext import commands
+from aiozmq.rpc import connect_rpc
 
 class Algorist(discord.Client):
     def __init__(self):
@@ -33,7 +35,12 @@ class Algorist(discord.Client):
 
     @commands.command()
     async def e(self, ctx):
+        if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
+            raise Exception('SANDBOX_PROCESSOR_BIND_HOST is not set')
         try:
-            raise NotImplementedError()
+            client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+            ret = await client.call.execute(ctx.message.content)
+            client.close()
+            await client.wait_closed()
         except:
             pass

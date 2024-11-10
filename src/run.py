@@ -28,7 +28,7 @@ from processor import inbox as processor_inbox
 from sandbox import inbox as sandbox_inbox
 from bot import Algorist
 
-async def _run():
+async def _insecure():
     async with asyncio.TaskGroup() as tg:
         if os.environ.get("DISCORD_TOKEN") is None:
             raise Exception("DISCORD_TOKEN environment variable not set")
@@ -37,5 +37,5 @@ async def _run():
             tg.create_task(processor_inbox()),
             tg.create_task(Algorist().start(os.environ.get("DISCORD_TOKEN"))))
 
-def run():
-    asyncio.get_event_loop().run_until_complete(_run())
+def insecure():
+    asyncio.get_event_loop().run_until_complete(_insecure())
