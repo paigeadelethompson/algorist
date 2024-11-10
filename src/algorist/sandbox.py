@@ -21,16 +21,22 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
-
+import hashlib
 import os, statistics, math
 from aiozmq.rpc import AttrHandler, serve_rpc, method
 from RestrictedPython import compile_restricted, safe_builtins
 import numpy, pandas, matplotlib, itertools
 import user, faction
 
-class SandBox(AttrHandler):
-    def __init__(self):
-        self.sandbox_globals = {
+class ExecutionContext:
+    async def hash_id(guild, channel):
+        return hashlib.sha256(
+            bytes(guild, 'utf-8') + bytes(channel, 'utf-8')).hexdigest()
+
+    def __init__(self, guild, channel):
+        self.guild = guild
+        self.channel = channel
+        self.globals = {
             '__builtins__': safe_builtins,
             'NP': numpy,
             'P': pandas,
@@ -41,21 +47,31 @@ class SandBox(AttrHandler):
             'S': statistics,
             'M': math,
         }
-        self.sandbox_locals = {}
+        self.locals = {}
+
+class SandBox(AttrHandler):
+    def __init__(self):
+        self.ctx = {}
         super().__init__()
 
+    async def get_context(self, guild, channel):
+        hash_id = await ExecutionContext.hash_id(guild, channel)
+        if self.ctx.get(hash_id) is None:
+            self.ctx[hash_id] = ExecutionContext(guild, channel)
+        return self.ctx.get(hash_id)
+
     @method
-    async def execute(self, command: str):
+    async def execute(self, guild: str, channel: str, command: str):
+        ctx = await self.get_context(guild, channel)
         code = compile_restricted(
             command,
             filename='<inline code>',
             mode='eval')
-        exec(code, self.sandbox_globals, self.sandbox_locals, None)
+        exec(code, ctx.globals, ctx.locals, None)
 
 async def inbox():
     if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
         raise Exception("SANDBOX_PROCESSOR_BIND_HOST not set")
     bind_host = os.environ.get("SANDBOX_PROCESSOR_BIND_HOST")
     server = await serve_rpc(SandBox(), bind=bind_host)
-    server_addr = list(server.transport.bindings()).pop(0)
     await server.wait_closed()

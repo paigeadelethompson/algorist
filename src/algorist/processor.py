@@ -30,7 +30,7 @@ import aiozmq
 import pyaes
 from tinydb import TinyDB, Query
 import os
-from base64 import b64decode
+from base64 import b64encode, b64decode
 
 class ConfigDB:
     def __init__(self):
@@ -45,40 +45,44 @@ class ConfigDB:
         self.db = TinyDB(self.config_db_path)
 
         if len(self.db.search(Query().key == "pbkdf2_password")) <= 0:
-            passwd = "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32))
-            salt = "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32))
-            iv = os.urandom(16)
+            passwd = b64encode(
+                "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32)))
+            salt = b64encode(
+                "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32)))
+            iv = b64encode(os.urandom(16))
 
             self.db.table("config").insert({"key": "pbkdf2_password", "value": passwd})
             self.db.table("config").insert({"key": "pbkdf2_salt", "value": salt})
             self.db.table("config").insert({"key": "aes_iv", "value": iv})
 
-        salt = self.db.search(Query().key == "pbkdf2_salt").pop().get("value")
-        passwd = self.db.search(Query().key == "pbkdf2_password").pop().get("value")
-        iv = self.db.search(Query().key == "pbkdf2_salt").pop().get("value")
+        salt = b64decode(self.db.search(Query().key == "pbkdf2_salt").pop().get("value"))
+        passwd = b64decode(self.db.search(Query().key == "pbkdf2_password").pop().get("value"))
+        iv = b64decode(self.db.search(Query().key == "pbkdf2_salt").pop().get("value"))
 
-        iterations = 100000
-        key = hashlib.pbkdf2_hmac('sha256', passwd, salt, iterations)
+        key = hashlib.pbkdf2_hmac('sha256', passwd, salt, iterations=100000)
 
         self.encrypt = pyaes.Encrypter(pyaes.AESModeOfOperationCBC(key, iv))
         self.decrypt = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(key, iv))
 
     async def save_root_api_key(self, key):
         self.db.remove(Query().key == "api_key")
-        self.db.table("config").insert({"key": "api_key", "value": self.encrypt_data(key)})
+        self.db.table("config").insert({"key": "api_key", "value": self.encrypt_data(b64encode(key))})
 
     async def get_root_api_key(self):
-        raise NotImplementedError()
+        if len(self.db.search(Query().key == "api_key")) <= 0:
+            raise Exception("Torn default api key is not set")
+        else:
+            self.decrypt_data(b64decode(self.db.search(Query().key == "api_key").pop().get("value")))
 
     async def decrypt_data(self, encrypted_value):
         decrypted = self.decrypt.feed(encrypted_value)
         decrypted += self.decrypt.feed()
-        return decrypted
+        return b64decode(decrypted)
 
     async def encrypt_data(self, unencrypted_value):
         encrypted = self.encrypt.feed(unencrypted_value)
         encrypted += self.encrypt.feed()
-        return encrypted
+        return b64encode(encrypted)
 
 class TornV2API(aiozmq.rpc.AttrHandler):
     def __init__(self, db: ConfigDB):
@@ -95,17 +99,25 @@ class TornV2API(aiozmq.rpc.AttrHandler):
             query = "{base}/user?key={api_key}&id={id}&striptags=true".format(
             base=self._base_url, api_key=self.db.get_root_api_key(), id=id)
         else:
-            key = self.db.decrypt_data(api_key)
+            key = self.db.decrypt_data(b64decode(api_key))
             query = "{base}/user?key={api_key}&id={id}&striptags=true".format(
                 base=self._base_url, api_key=key, id=id)
 
-        async with aiohttp.request('GET', query) as resp:
-            assert resp.status == 200
-            return await resp
+        async with aiohttp.request('GET', query) as response:
+            if (response.status == 200
+                    and response.content_length is not None
+                    and response.content_length <= 1048576):
+                return await response.content.read(response.content_length)
+            else:
+                return None
 
+    '''
+    Encrypts a user's API key and sends it back to the processor client 
+    for safe storage
+    '''
     @aiozmq.rpc.method
     async def encrypt_user_api_key(self, user_api_key):
-        return self.db.encrypt_data(user_api_key)
+        return b64encode(self.db.encrypt_data(user_api_key))
 
 async def inbox():
     config = ConfigDB()
@@ -113,5 +125,4 @@ async def inbox():
         raise Exception("REQUEST_PROCESSOR_BIND_HOST not set")
     bind_host = os.environ.get("REQUEST_PROCESSOR_BIND_HOST")
     server = await aiozmq.rpc.serve_rpc(TornV2API(config), bind=bind_host)
-    server_addr = list(server.transport.bindings()).pop(0)
     await server.wait_closed()

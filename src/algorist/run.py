@@ -26,7 +26,14 @@ import asyncio
 import os
 from processor import inbox as processor_inbox
 from sandbox import inbox as sandbox_inbox
-from bot import Algorist
+from bot import Algorist, BotProcessor
+
+async def _bot():
+    b = Algorist()
+    async with asyncio.TaskGroup() as tg:
+        await asyncio.gather(
+            bot.start(os.environ.get("DISCORD_TOKEN")),
+            tg.create_task(BotProcessor(b)))
 
 async def _insecure():
     async with asyncio.TaskGroup() as tg:
@@ -35,16 +42,16 @@ async def _insecure():
         await asyncio.gather(
             tg.create_task(sandbox_inbox()),
             tg.create_task(processor_inbox()),
-            tg.create_task(Algorist().start(os.environ.get("DISCORD_TOKEN"))))
+            tg.create_task(_bot()))
 
 def insecure():
-    asyncio.get_event_loop().run_until_complete(_insecure())
+    asyncio.get_event_loop().run(_insecure())
 
 def bot():
-    raise NotImplementedError()
+    asyncio.run(_bot())
 
 def processor():
-    raise NotImplementedError()
+    asyncio.run(processor_inbox())
 
 def sandbox():
-    raise NotImplementedError()
+    asyncio.run(sandbox_inbox())

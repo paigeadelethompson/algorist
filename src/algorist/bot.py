@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 import os
-
+import aiozmq
 import discord
 from discord.ext import commands
 from aiozmq.rpc import connect_rpc
@@ -34,13 +34,45 @@ class Algorist(discord.Client):
         print(f'Logged in as {self.user}')
 
     @commands.command()
+    async def invite_user(self, ctx):
+        raise NotImplementedError()
+
+    @commands.command()
     async def e(self, ctx):
         if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
             raise Exception('SANDBOX_PROCESSOR_BIND_HOST is not set')
         try:
             client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
-            ret = await client.call.execute(ctx.message.content)
+            ret = await client.call.execute(ctx.guild.id, ctx.channel.id, ctx.message.content)
             client.close()
             await client.wait_closed()
         except:
             pass
+
+class BotProcessor(aiozmq.rpc.AttrHandler):
+    def __init__(self, bot: Algorist):
+        self.bot = bot
+        super().__init__()
+
+    @aiozmq.rpc.method
+    def send_image_to_room(self, guild, channel, data):
+        g = self.bot.get_guild(guild)
+        c = g.get_channel(channel)
+        raise NotImplementedError()
+
+    @aiozmq.rpc.method
+    def send_notification_to_room(self, guild, channel, data):
+        g = self.bot.get_guild(guild)
+        c = g.get_channel(channel)
+        raise NotImplementedError()
+
+    @aiozmq.rpc.method
+    def send_private_message_to_user(self, user: str, data):
+        raise NotImplementedError()
+
+async def inbox(self, bot: Algorist):
+    if os.environ.get("BOT_PROCESSOR_BIND_HOST") is None:
+        raise Exception("BOT_PROCESSOR_BIND_HOST not set")
+    bind_host = os.environ.get("BOT_PROCESSOR_BIND_HOST")
+    server = await aiozmq.rpc.serve_rpc(BotProcessor(bot), bind=bind_host)
+    await server.wait_closed()
