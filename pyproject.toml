@@ -30,3 +30,22 @@ algorist-insecure = "algorist.run:insecure"
 algorist-processor = "algorist.run:processor"
 algorist-bot = "algorist.run:bot"
 algorist-sandbox = "algorist.run:sandbox"
+
+[tool.pylint.messages_control]
+errors-only = true
+ignored-modules = []
+
+[tool.autopep8]
+max_line_length = 79
+recursive = true
+aggressive = 3
+experimental = true
+
+[tool.autoflake]
+check = false
+recursive = true
+expand-star-imports = true
+remove-all-unused-imports = true
+ignore-init-module-imports = false
+remove-duplicate-keys = true
+remove-unused-variables = true

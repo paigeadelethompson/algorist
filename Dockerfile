@@ -30,9 +30,9 @@ RUN chown -R algorist:algorist /srv/algorist
 
 RUN mkdir /tmp/algorist
 
-WORKDIR /tmp/algorist
+ADD . /tmp/algorist
 
-ADD .
+WORKDIR /tmp/algorist
 
 RUN poetry build
 
@@ -44,7 +44,7 @@ ENV PATH=/home/algorist/.local/bin:${PATH}
 
 WORKDIR /home/algorist
 
-ENV /home/algorist
+ENV HOME=/home/algorist
 
 VOLUME /srv/algorist/db/user
 
