@@ -44,5 +44,12 @@ class FactionDB:
         if os.access(path, os.W_OK):
             raise Exception("FACTION_DB_PATH isn't writable")
 
-    async def get_db(path):
+    async def get_db(path) -> TinyDB:
         return TinyDB(path)
+
+    async def list_factions(self):
+        raise NotImplementedError()
+
+    async def get_faction(self, id: int):
+        path = "{path}/{id}".format(path=self.faction_db_path, id=id)
+        raise NotImplementedError()

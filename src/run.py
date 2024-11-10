@@ -22,18 +22,20 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import discord
-from discord.ext import commands
+import asyncio
+import os
+from processor import inbox as processor_inbox
+from sandbox import inbox as sandbox_inbox
+from bot import Algorist
 
-class Algorist(discord.Client):
-    def __init__(self):
-        super().__init__()
-    async def on_ready(self):
-        print(f'Logged in as {self.user}')
+async def _run():
+    async with asyncio.TaskGroup() as tg:
+        if os.environ.get("DISCORD_TOKEN") is None:
+            raise Exception("DISCORD_TOKEN environment variable not set")
+        await asyncio.gather(
+            tg.create_task(sandbox_inbox()),
+            tg.create_task(processor_inbox()),
+            tg.create_task(Algorist().start(os.environ.get("DISCORD_TOKEN"))))
 
-    @commands.command()
-    async def e(self, ctx):
-        try:
-            raise NotImplementedError()
-        except:
-            pass
+def run():
+    asyncio.get_event_loop().run_until_complete(_run())

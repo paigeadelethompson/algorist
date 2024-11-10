@@ -86,28 +86,21 @@ class UserDB:
         self.config_db_path = None
         if os.environ.get("USER_DB_PATH") is None:
             raise Exception("USER_DB_PATH not set")
-        path = os.environ.get("USER_DB_PATH")
-        if not os.path.isdir(path):
+        self.path = os.environ.get("USER_DB_PATH")
+        if not os.path.isdir(self.path):
             raise Exception("USER_DB_PATH should be a directory")
-        if os.access(path, os.W_OK):
+        if os.access(self.path, os.W_OK):
             raise Exception("USER_DB_PATH isn't writable")
 
-    async def get_db(path):
+    async def _get_db(path):
         return TinyDB(path)
 
     async def list_users(self):
         raise NotImplementedError()
 
-    async def list_factions(self):
-        raise NotImplementedError()
-
     async def get_user(self, id: int):
-        path = "{path}/{id}".format(path=self.user_db_path, id=id)
-        return UserDB.get_db(path)
-
-    async def get_faction(self, id: int):
-        path = "{path}/{id}".format(path=self.faction_db_path, id=id)
-        return UserDB.get_db(path)
+        path = "{path}/{id}".format(path=self.path, id=id)
+        return UserDB._get_db(path)
 
     async def save_user(self, user: User):
         raise NotImplementedError()

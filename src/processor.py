@@ -30,6 +30,7 @@ import aiozmq
 import pyaes
 from tinydb import TinyDB, Query
 import os
+from base64 import b64decode
 
 class ConfigDB:
     def __init__(self):
@@ -100,11 +101,7 @@ class TornV2API(aiozmq.rpc.AttrHandler):
 
         async with aiohttp.request('GET', query) as resp:
             assert resp.status == 200
-            response = await resp
-            client = await aiozmq.rpc.connect_rpc(
-                connect=os.environ.get("RESPONSE_PROCESSOR_BIND_HOST"))
-            await client.call.user_api_response(response)
-            await client.close()
+            return await resp
 
     @aiozmq.rpc.method
     async def encrypt_user_api_key(self, user_api_key):
