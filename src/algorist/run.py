@@ -27,7 +27,7 @@ import os
 
 from algorist.processor import inbox as processor_inbox
 from algorist.sandbox import inbox as sandbox_inbox
-from algorist.bot import Algorist, BotProcessor
+from algorist.bot import Algorist
 from algorist.bot import inbox as bot_inbox
 
 async def _bot():

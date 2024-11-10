@@ -24,9 +24,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import os
 import aiozmq
+from aiozmq.rpc import connect_rpc
 import discord
 from discord.ext import commands
-from aiozmq.rpc import connect_rpc
 
 class Algorist(discord.Client):
     def __init__(self):

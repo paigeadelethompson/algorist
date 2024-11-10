@@ -21,12 +21,13 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
+
 import hashlib
 import os, statistics, math
 from aiozmq.rpc import AttrHandler, serve_rpc, method
 from RestrictedPython import compile_restricted, safe_builtins
 import numpy, pandas, matplotlib, itertools
-import algorist.user, algorist.faction
+from algorist import user, faction
 
 class ExecutionContext:
     async def hash_id(guild, channel):

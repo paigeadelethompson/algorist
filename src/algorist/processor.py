@@ -24,7 +24,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import hashlib
 import string
-from random import random
+from random import random, choice
 import aiohttp
 import aiozmq
 from aiozmq import rpc
@@ -40,30 +40,30 @@ class ConfigDB:
 
         self.config_db_path = os.environ.get("CONFIG_DB_PATH")
 
-        if os.access(self.config_db_path, os.W_OK):
+        if not os.access(self.config_db_path, os.W_OK):
             raise Exception("CONFIG_DB_PATH isn't writable")
 
-        self.db = TinyDB(self.config_db_path)
+        self.db = TinyDB("{}/config.db".format(self.config_db_path))
 
         if len(self.db.search(Query().key == "pbkdf2_password")) <= 0:
-            passwd = b64encode(
-                "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32)))
-            salt = b64encode(
-                "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(32)))
+            passwd = b64encode(bytes(
+                "".join(choice(string.ascii_uppercase + string.digits) for _ in range(32)), encoding="utf-8"))
+            salt = b64encode(bytes(
+                "".join(choice(string.ascii_uppercase + string.digits) for _ in range(32)), encoding="utf-8"))
             iv = b64encode(os.urandom(16))
 
-            self.db.table("config").insert({"key": "pbkdf2_password", "value": passwd})
-            self.db.table("config").insert({"key": "pbkdf2_salt", "value": salt})
-            self.db.table("config").insert({"key": "aes_iv", "value": iv})
+            self.db.table("config").insert({"key": "pbkdf2_password", "value": str(passwd)})
+            self.db.table("config").insert({"key": "pbkdf2_salt", "value": str(salt)})
+            self.db.table("config").insert({"key": "aes_iv", "value": str(iv)})
 
-        salt = b64decode(self.db.search(Query().key == "pbkdf2_salt").pop().get("value"))
-        passwd = b64decode(self.db.search(Query().key == "pbkdf2_password").pop().get("value"))
-        iv = b64decode(self.db.search(Query().key == "pbkdf2_salt").pop().get("value"))
 
+        salt = b64decode(self.db.table("config").search(Query().key == "pbkdf2_salt").pop().get("value"))
+        passwd = b64decode(self.db.table("config").search(Query().key == "pbkdf2_password").pop().get("value"))
+        iv = self.db.table("config").search(Query().key == "aes_iv").pop().get("value")
         key = hashlib.pbkdf2_hmac('sha256', passwd, salt, iterations=100000)
 
-        self.encrypt = pyaes.Encrypter(pyaes.AESModeOfOperationCBC(key, iv))
-        self.decrypt = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(key, iv))
+        self.encrypt = pyaes.Encrypter(pyaes.AESModeOfOperationCBC(key, b64decode(iv)[:16]))
+        self.decrypt = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(key, b64decode(iv)[:16]))
 
     async def save_root_api_key(self, key):
         self.db.remove(Query().key == "api_key")
