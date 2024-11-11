@@ -29,6 +29,46 @@ from RestrictedPython import compile_restricted, safe_builtins
 import numpy, pandas, matplotlib, itertools
 from algorist import user, faction
 
+_out = []
+def display(data, depth=0, max_depth=2, max_extents=3):
+    if depth == 0:
+        _out.clear()
+    elif depth > 1:
+        _out.append()
+    if type(data) == list:
+        _out.append("list")
+        if len(data) > max_extents:
+            _ = [display(index) for index in data[:max_extents]]
+            if len(data) > max_extents:
+                _out.append("& {data} more".format(data=len(data)-max_extents))
+        else:
+            _out.append("empty")
+    elif type(data) == bytes:
+        _out.append("bytes")
+        if len(data.keys()) > 0:
+            _ = [display(index) for index in data[:max_extents]]
+            if len(data) > max_extents:
+                _out.append("& {data} more".format(data=len(data)-max_extents))
+        else:
+            _out.append("empty")
+    elif type(data) == dict:
+        _out.append("dict")
+        if len(data.keys()) > 0:
+            _ = [display(data.get(index)) for index in list(data.keys())[:max_extents]]
+            if len(data.keys()) > max_extents:
+                _out.append("..{data} more".format(data=len(data)-max_extents))
+        else:
+            _out.append("empty")
+    elif type(data) == tuple:
+        _out.append("tuple")
+        _ = [display(index) for index in data[:max_extents]]
+    else:
+        if data is None:
+            _out.append("empty")
+        else:
+            _out.append(str(data))
+
+
 class ExecutionContext:
     async def hash_id(guild, channel):
         return hashlib.sha256(
@@ -47,8 +87,9 @@ class ExecutionContext:
             'F': faction,
             'S': statistics,
             'M': math,
+            '_DISPLAY': display,
         }
-        self.locals = {}
+        self.locals = {"__out": []}
 
 class SandBox(AttrHandler):
     def __init__(self):
@@ -65,10 +106,12 @@ class SandBox(AttrHandler):
     async def execute(self, guild: str, channel: str, command: str):
         ctx = await self.get_context(guild, channel)
         code = compile_restricted(
-            command,
+            "_DISPLAY(({command}))".format(
+                command=command),
             filename='<inline code>',
             mode='eval')
         exec(code, ctx.globals, ctx.locals, None)
+        return ctx.get("_out")
 
 async def inbox():
     if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
