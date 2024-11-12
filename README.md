@@ -110,12 +110,14 @@ algorist-processor
 - `aiozmq` evidently doesn't support TLS as of yet: https://github.com/aio-libs/aiozmq/issues/123
 . I can't ascertain whether the standard zeromq module for Python even supports this but will investigate further as needed.
 
+### TODO
+- support sending matplotlib graph from sandbox to Discord channel as an image
+
 ### Hardening ideas 
 - possibly using the `ast` module to parse / determine the nature of the request
 payload (input sanitization) before sending it into `exec`
 - byte compiling code bundled with containers; prevents exposure of the source
 - homomorphic encryption for data at rest: https://pypi.org/project/concrete-python/
-
 
 ### Torn V2 API Documentation
 Documentation:
