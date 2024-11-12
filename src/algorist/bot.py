@@ -24,33 +24,57 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import os
 import aiozmq
+import interactions
 from aiozmq.rpc import connect_rpc
-import discord
-from discord.ext import commands
+from interactions import listen, slash_command, slash_str_option
 
-class Algorist(discord.Client):
-    def __init__(self):
-        intents = discord.Intents.default()
-        super().__init__(intents=intents)
+
+class Algorist(interactions.Client):
+    @listen()
     async def on_ready(self):
-        print(f'Logged in as {self.user}')
+        print(f'Logged on as {self.user}!')
+        await self.change_presence(status=interactions.Status.ONLINE)
 
-    @commands.command()
-    async def invite_user(self, ctx):
-        raise NotImplementedError()
+    @slash_command(name="e", description="Run sandboxed code", options=[slash_str_option(
+        name="command", description="code to evaluate", required=True)])
+    async def e(self, ctx: interactions.SlashContext, command: str):
+        client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+        if ctx.guild != None and ctx.channel is not None:
+            ret = await client.call.execute(ctx.guild.id, ctx.channel.id, command)
+        else:
+            ret = await client.call.execute(1, 1, command)
+        client.close()
+        await client.wait_closed()
+        await ctx.send(str(ret))
 
-    @commands.command()
-    async def e(self, ctx):
-        if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
-            raise Exception('SANDBOX_PROCESSOR_BIND_HOST is not set')
-        if ctx.author.guild_permissions.administrator:
-            try:
-                client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
-                ret = await client.call.execute(ctx.guild.id, ctx.channel.id, ctx.message.content)
-                client.close()
-                await client.wait_closed()
-            except:
-                pass
+    @slash_command(name="set_default_torn_api_key", description="Sets default API key", options=[slash_str_option(
+        name="api_key", description="the default api key to use for Torn", required=True)])
+    async def set_default_torn_api_key(self, ctx: interactions.SlashContext, api_key: str):
+        client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+        ret = await client.call.store_default_api_key(api_key)
+        client.close()
+        await client.wait_closed()
+        await ctx.send(str(ret))
+
+    @slash_command(name="link_torn_user", description="Links Discord user to Torn user", options=[slash_str_option(
+        name="torn_user_id", description="the torn user id to link", required=True), slash_str_option(
+        name="discord_user", description="the discord user id to link", required=True)])
+    async def link_torn_user(self, ctx: interactions.SlashContext, torn_user_id: str, discord_user_id: str):
+        client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+        ret = await client.call.link_torn_user(torn_user_id, discord_user_id)
+        client.close()
+        await client.wait_closed()
+        await ctx.send(str(ret))
+
+    @slash_command(name="set_torn_api_key", description="Sets API key", options=[slash_str_option(
+        name="api_key", description="the api key to use for Torn", required=True)])
+    async def set_default_torn_api_key(self, ctx: interactions.SlashContext, api_key: str):
+        client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+        ret = await client.call.store_default_api_key(api_key, ctx.author.user.id)
+        client.close()
+        await client.wait_closed()
+        await ctx.send(str(ret))
+
 
 class BotProcessor(aiozmq.rpc.AttrHandler):
     def __init__(self, bot: Algorist):
@@ -73,9 +97,12 @@ class BotProcessor(aiozmq.rpc.AttrHandler):
     def send_private_message_to_user(self, user: str, data):
         raise NotImplementedError()
 
-async def inbox(bot: Algorist):
+
+async def inbox(bot):
     if os.environ.get("BOT_PROCESSOR_BIND_HOST") is None:
         raise Exception("BOT_PROCESSOR_BIND_HOST not set")
+    if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
+        raise Exception('SANDBOX_PROCESSOR_BIND_HOST is not set')
     bind_host = os.environ.get("BOT_PROCESSOR_BIND_HOST")
     server = await aiozmq.rpc.serve_rpc(BotProcessor(bot), bind=bind_host)
     await server.wait_closed()

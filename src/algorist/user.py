@@ -23,8 +23,11 @@ OTHER DEALINGS IN THE SOFTWARE.
 """
 
 import json
-import sys, os
-from tinydb import TinyDB, Query
+import os
+from aiozmq.rpc import connect_rpc
+from tinydb import TinyDB
+from algorist.sandbox import SandBoxConfigDB
+
 
 class User:
     def __init__(self, payload: str):
@@ -92,7 +95,7 @@ class UserDB:
         if os.access(self.path, os.W_OK):
             raise Exception("USER_DB_PATH isn't writable")
 
-    async def _get_db(path):
+    async def _get_db(path) -> TinyDB:
         return TinyDB(path)
 
     async def list_users(self):
@@ -100,7 +103,14 @@ class UserDB:
 
     async def get_user(self, id: int):
         path = "{path}/{id}".format(path=self.path, id=id)
-        return UserDB._get_db(path)
+        db = await UserDB._get_db(path)
+        if len(db.table("user_object").all()) <= 0:
+            client = await connect_rpc(connect=os.environ.get("REQUEST_PROCESSOR_BIND_HOST"))
+            default_api_key = SandBoxConfigDB().get_default_api_key()
+            ret = await client.call.get_user(id)
+            client.close()
+            await client.wait_closed()
+            raise NotImplementedError()
 
     async def save_user(self, user: User):
         raise NotImplementedError()

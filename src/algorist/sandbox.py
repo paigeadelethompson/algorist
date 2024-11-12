@@ -24,55 +24,38 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import hashlib
 import os, statistics, math
-from aiozmq.rpc import AttrHandler, serve_rpc, method
+from aiozmq.rpc import AttrHandler, serve_rpc, method, connect_rpc
 from RestrictedPython import compile_restricted, safe_builtins
 import numpy, pandas, matplotlib, itertools
+from tinydb import TinyDB
+
 from algorist import user, faction
 
-_out = []
-def display(data, depth=0, max_depth=2, max_extents=3):
-    if depth == 0:
-        _out.clear()
-    elif depth > 1:
-        _out.append()
-    if type(data) == list:
-        _out.append("list")
-        if len(data) > max_extents:
-            _ = [display(index) for index in data[:max_extents]]
-            if len(data) > max_extents:
-                _out.append("& {data} more".format(data=len(data)-max_extents))
-        else:
-            _out.append("empty")
-    elif type(data) == bytes:
-        _out.append("bytes")
-        if len(data.keys()) > 0:
-            _ = [display(index) for index in data[:max_extents]]
-            if len(data) > max_extents:
-                _out.append("& {data} more".format(data=len(data)-max_extents))
-        else:
-            _out.append("empty")
-    elif type(data) == dict:
-        _out.append("dict")
-        if len(data.keys()) > 0:
-            _ = [display(data.get(index)) for index in list(data.keys())[:max_extents]]
-            if len(data.keys()) > max_extents:
-                _out.append("..{data} more".format(data=len(data)-max_extents))
-        else:
-            _out.append("empty")
-    elif type(data) == tuple:
-        _out.append("tuple")
-        _ = [display(index) for index in data[:max_extents]]
-    else:
-        if data is None:
-            _out.append("empty")
-        else:
-            _out.append(str(data))
+class SandBoxConfigDB:
+    def __init__(self):
+        if os.environ.get("CONFIG_DB_PATH") is None:
+            raise Exception("CONFIG_DB_PATH not set")
+        self.config_db_path = os.environ.get("CONFIG_DB_PATH")
+        if not os.access(self.config_db_path, os.W_OK):
+            raise Exception("CONFIG_DB_PATH isn't writable")
+        self.db = TinyDB("{}/config.db".format(self.config_db_path))
 
+    async def store_default_api_key(self, api_key):
+        client = await connect_rpc(connect=os.environ.get("REQUEST_PROCESSOR_BIND_HOST"))
+        encrypted_api_key = await client.call.encrypt_api_key(api_key)
+
+        if len(self.db.table("default_api_key").all()) > 0:
+            self.db.table("default_api_key").remove()
+
+        self.db.table("default_api_key").insert({"value": encrypted_api_key})
+
+    async def get_default_api_key(self):
+        self.db.table("default_api_key").all().pop().get("value")
 
 class ExecutionContext:
     async def hash_id(guild, channel):
         return hashlib.sha256(
-            bytes(guild, 'utf-8') + bytes(channel, 'utf-8')).hexdigest()
+            bytes(str(guild), 'utf-8') + bytes(str(channel), 'utf-8')).hexdigest()
 
     def __init__(self, guild, channel):
         self.guild = guild
@@ -87,9 +70,9 @@ class ExecutionContext:
             'F': faction,
             'S': statistics,
             'M': math,
-            '_DISPLAY': display,
         }
-        self.locals = {"__out": []}
+        self.locals = {"out": []}
+
 
 class SandBox(AttrHandler):
     def __init__(self):
@@ -106,12 +89,25 @@ class SandBox(AttrHandler):
     async def execute(self, guild: str, channel: str, command: str):
         ctx = await self.get_context(guild, channel)
         code = compile_restricted(
-            "_DISPLAY(({command}))".format(
+            "{command}".format(
                 command=command),
             filename='<inline code>',
             mode='eval')
-        exec(code, ctx.globals, ctx.locals, None)
-        return ctx.get("_out")
+        exec(code, ctx.globals, ctx.locals)
+        return ctx.locals.get("out")
+
+    @method
+    async def set_default_torn_api_key(self, api_key):
+        await SandBoxConfigDB().store_default_api_key(api_key)
+
+    @method
+    async def link_torn_user(self, torn_user_id, discord_user_id):
+        raise NotImplementedError()
+
+    @method
+    async def set_torn_api_key(self, api_key, discord_user_id):
+        raise NotImplementedError()
+
 
 async def inbox():
     if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
