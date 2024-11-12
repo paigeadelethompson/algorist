@@ -91,9 +91,9 @@ algorist-bot
 - in another terminal run `poetry shell` from the project directory
 and start the sandbox:
 ```
-USER_DB_PATH=/srv/algorist/db/user                  \
-FACTION_DB_PATH=/srv/algorist/db/faction            \
-CONFIG_DB_PATH=/srv/algorist/db/config/sandbox      \
+USER_DB_PATH=/tmp/algorist/db/user                  \
+FACTION_DB_PATH=/tmp/algorist/db/faction            \
+CONFIG_DB_PATH=/tmp/algorist/db/config/sandbox      \
 REQUEST_PROCESSOR_BIND_HOST="tcp://127.0.0.1:19820" \
 SANDBOX_PROCESSOR_BIND_HOST="tcp://127.0.0.1:19819" \
 algorist-sandbox
@@ -101,7 +101,7 @@ algorist-sandbox
 - open a third terminal, run `poetry shell`, and start the request
 processor:
 ```
-CONFIG_DB_PATH=/srv/algorist/db/config/processor    \
+CONFIG_DB_PATH=/tmp/algorist/db/config/processor    \
 REQUEST_PROCESSOR_BIND_HOST="tcp://127.0.0.1:19820" \
 algorist-processor
 ```
