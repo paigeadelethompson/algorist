@@ -69,7 +69,7 @@ and replace the value of `DISCORD_TOKEN` with a valid token, refer to https://di
 to create a Discord app and retrieve your token. 
 - run `docker-compose up -d` This method will start 3 separate containers (one for each service.)
 - Invite the bot to your channel using the invite link provided in the bot administration
-portal: https://discord.com/developers/applications/1305197668036771912/installation
+portal: https://discord.com/developers/applications/
 
 ## Development 
 Each of the three processes can be started on the same machine, start by entering the Python
