@@ -24,14 +24,27 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import json
 import os
-from aiozmq.rpc import connect_rpc
 from tinydb import TinyDB
-from algorist.sandbox import SandBoxConfigDB
-
+from algorist.sandbox.config import SandBoxConfigDB
+import traceback
+import zerorpc
+from datetime import datetime
 
 class User:
     def __init__(self, payload: str):
         self.payload = json.loads(payload)
+        self.snapshot = str(datetime.now())
+
+    def is_error(self):
+        if self.payload.get("error") is not None:
+            return True
+        return False
+
+    def error_message(self):
+        raise NotImplementedError()
+
+    def error_code(self):
+        raise NotImplementedError()
 
     def id(self):
         return self.payload.get("player_id")
@@ -66,13 +79,13 @@ class UserHOF:
         self._user = user
         self.payload = json.loads(payload)
 
-    def att(self):
+    def attacks(self):
         return {
             "v": self.get("attacks").get("value"),
             "r": self.get("attacks").get("rank")
         }
 
-    def gua(self):
+    def defense(self):
         return {
             "v": self.get("defends").get("value"),
             "r": self.get("defends").get("rank")
@@ -92,28 +105,38 @@ class UserDB:
         self.path = os.environ.get("USER_DB_PATH")
         if not os.path.isdir(self.path):
             raise Exception("USER_DB_PATH should be a directory")
-        if os.access(self.path, os.W_OK):
+        if not os.access(self.path, os.W_OK):
             raise Exception("USER_DB_PATH isn't writable")
 
-    async def _get_db(path) -> TinyDB:
+    def _get_db(path) -> TinyDB:
         return TinyDB(path)
 
-    async def list_users(self):
-        raise NotImplementedError()
+    def get_user(self, id: int):
+        try:
+            client = zerorpc.Client()
+            client.connect(os.environ.get("REQUEST_PROCESSOR_BIND_HOST"))
+            key = SandBoxConfigDB().get_default_api_key()
+            payload = client.get_user(key, id)
+            if payload is None:
+                raise Exception("empty response")
+            u = User(payload)
+            if u.is_error():
+                raise Exception(u.payload.get("error"))
+            self.save_user(u)
+            path = "{path}/{id}".format(path=self.path, id=u.id())
+            db = UserDB._get_db(path)
+            return [json.loads(index, object_hook=User) for index in db.table("user_objects").all()]
+        except Exception as e:
+            traceback.print_exception(e)
+            return []
 
-    async def get_user(self, id: int):
-        path = "{path}/{id}".format(path=self.path, id=id)
-        db = await UserDB._get_db(path)
-        if len(db.table("user_object").all()) <= 0:
-            client = await connect_rpc(connect=os.environ.get("REQUEST_PROCESSOR_BIND_HOST"))
-            default_api_key = SandBoxConfigDB().get_default_api_key()
-            ret = await client.call.get_user(id)
-            client.close()
-            await client.wait_closed()
-            raise NotImplementedError()
+    def save_user(self, user: User):
+        try:
+            path = "{path}/{id}".format(path=self.path, id=user.id())
+            db = UserDB._get_db(path)
+            db.table("user_objects").insert(user.__dict__)
+        except Exception as e:
+            traceback.print_exception(e)
 
-    async def save_user(self, user: User):
-        raise NotImplementedError()
-
-    async def save_user_hof(self, user_hof: UserHOF):
+    def save_user_hof(self, user_hof: UserHOF):
         raise NotImplementedError()

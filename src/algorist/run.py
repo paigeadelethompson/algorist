@@ -25,7 +25,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 import asyncio
 import os
 from algorist.processor import inbox as processor_inbox
-from algorist.sandbox import inbox as sandbox_inbox
+from algorist.sandbox.sandbox import inbox as sandbox_inbox
 from algorist.bot import Algorist
 from algorist.bot import inbox as bot_inbox
 import interactions as discord
@@ -37,8 +37,6 @@ client = Algorist(
 
 
 async def _bot():
-    if os.environ.get("DISCORD_BOT_PREFIX") is None:
-        raise Exception("DISCORD_BOT_PREFIX is not set")
     if os.environ.get("DISCORD_TOKEN") is None:
         raise Exception("DISCORD_TOKEN environment variable not set")
     async with asyncio.TaskGroup() as tg:

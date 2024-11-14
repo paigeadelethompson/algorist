@@ -24,33 +24,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import hashlib
 import os, statistics, math
-from aiozmq.rpc import AttrHandler, serve_rpc, method, connect_rpc
+from aiozmq.rpc import AttrHandler, serve_rpc, method
 from RestrictedPython import compile_restricted, safe_builtins
+from RestrictedPython.Eval import default_guarded_getiter
 import numpy, pandas, matplotlib, itertools
-from tinydb import TinyDB
-
+import traceback
+from io import BytesIO
 from algorist import user, faction
-
-class SandBoxConfigDB:
-    def __init__(self):
-        if os.environ.get("CONFIG_DB_PATH") is None:
-            raise Exception("CONFIG_DB_PATH not set")
-        self.config_db_path = os.environ.get("CONFIG_DB_PATH")
-        if not os.access(self.config_db_path, os.W_OK):
-            raise Exception("CONFIG_DB_PATH isn't writable")
-        self.db = TinyDB("{}/config.db".format(self.config_db_path))
-
-    async def store_default_api_key(self, api_key):
-        client = await connect_rpc(connect=os.environ.get("REQUEST_PROCESSOR_BIND_HOST"))
-        encrypted_api_key = await client.call.encrypt_api_key(api_key)
-
-        if len(self.db.table("default_api_key").all()) > 0:
-            self.db.table("default_api_key").remove()
-
-        self.db.table("default_api_key").insert({"value": encrypted_api_key})
-
-    async def get_default_api_key(self):
-        self.db.table("default_api_key").all().pop().get("value")
+from algorist.sandbox.config import SandBoxConfigDB
 
 class ExecutionContext:
     async def hash_id(guild, channel):
@@ -62,6 +43,7 @@ class ExecutionContext:
         self.channel = channel
         self.globals = {
             '__builtins__': safe_builtins,
+            '_getiter_': default_guarded_getiter,
             'NP': numpy,
             'P': pandas,
             'MPL': matplotlib,
@@ -69,10 +51,9 @@ class ExecutionContext:
             'U': user,
             'F': faction,
             'S': statistics,
-            'M': math,
+            'M': math
         }
-        self.locals = {"out": []}
-
+        self.locals = {"out": BytesIO()}
 
 class SandBox(AttrHandler):
     def __init__(self):
@@ -87,29 +68,43 @@ class SandBox(AttrHandler):
 
     @method
     async def execute(self, guild: str, channel: str, command: str):
-        ctx = await self.get_context(guild, channel)
-        code = compile_restricted(
-            "{command}".format(
-                command=command),
-            filename='<inline code>',
-            mode='eval')
-        exec(code, ctx.globals, ctx.locals)
-        return ctx.locals.get("out")
+        try:
+            ctx = await self.get_context(guild, channel)
+            ctx.locals.get("out").truncate(0)
+            code = compile_restricted(
+                "{command}".format(
+                    command=command),
+                filename='<inline code>',
+                mode='eval')
+            exec(code, ctx.globals, ctx.locals)
+            return ctx.locals.get("out").read().decode('utf-8')
+        except Exception as e:
+            traceback.print_exception(e)
 
     @method
     async def set_default_torn_api_key(self, api_key):
-        await SandBoxConfigDB().store_default_api_key(api_key)
+        try:
+            SandBoxConfigDB().store_default_api_key(api_key)
+        except Exception as e:
+            traceback.print_exception(e)
 
     @method
     async def link_torn_user(self, torn_user_id, discord_user_id):
-        raise NotImplementedError()
+        try:
+            raise NotImplementedError()
+        except Exception as e:
+            traceback.print_exception(e)
 
     @method
     async def set_torn_api_key(self, api_key, discord_user_id):
-        raise NotImplementedError()
-
+        try:
+            raise NotImplementedError()
+        except Exception as e:
+            traceback.print_exception(e)
 
 async def inbox():
+    if os.environ.get("REQUEST_PROCESSOR_BIND_HOST") is None:
+        raise Exception("REQUEST_PROCESSOR_BIND_HOST not set")
     if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
         raise Exception("SANDBOX_PROCESSOR_BIND_HOST not set")
     bind_host = os.environ.get("SANDBOX_PROCESSOR_BIND_HOST")
