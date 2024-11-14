@@ -29,8 +29,10 @@ from RestrictedPython import compile_restricted, safe_builtins
 from RestrictedPython.Eval import default_guarded_getiter
 import numpy, pandas, matplotlib, itertools
 import traceback
-from io import BytesIO
+from io import BytesIO, StringIO
 from algorist import user, faction
+from algorist.user import *
+from algorist.faction import *
 from algorist.sandbox.config import SandBoxConfigDB
 
 class ExecutionContext:
@@ -50,17 +52,19 @@ class ExecutionContext:
             'IT': itertools,
             'U': user,
             'F': faction,
+            'User': User,
+            'Faction': Faction,
             'S': statistics,
             'M': math
         }
-        self.locals = {"out": BytesIO()}
+        self.persisted_locals = {}
 
 class SandBox(AttrHandler):
     def __init__(self):
         self.ctx = {}
         super().__init__()
 
-    async def get_context(self, guild, channel):
+    async def get_context(self, guild, channel) -> ExecutionContext:
         hash_id = await ExecutionContext.hash_id(guild, channel)
         if self.ctx.get(hash_id) is None:
             self.ctx[hash_id] = ExecutionContext(guild, channel)
@@ -68,18 +72,27 @@ class SandBox(AttrHandler):
 
     @method
     async def execute(self, guild: str, channel: str, command: str):
+        ctx = await self.get_context(guild, channel)
+        locals = ctx.persisted_locals
         try:
-            ctx = await self.get_context(guild, channel)
-            ctx.locals.get("out").truncate(0)
             code = compile_restricted(
                 "{command}".format(
                     command=command),
                 filename='<inline code>',
-                mode='eval')
-            exec(code, ctx.globals, ctx.locals)
-            return ctx.locals.get("out").read().decode('utf-8')
+                mode='exec')
+            exec(code, ctx.globals, locals)
+            ctx.persisted_locals.update(
+                dict([(index, locals.get(index))
+                      for index in locals.keys()
+                      if index.upper() == index]))
         except Exception as e:
             traceback.print_exception(e)
+        finally:
+            return dict(
+                [(index, locals.get(index))
+                 for index in locals.keys()
+                 if not index.upper() == index])
+
 
     @method
     async def set_default_torn_api_key(self, api_key):

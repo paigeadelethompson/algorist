@@ -70,10 +70,8 @@ class TornV2API(object):
     def get_user(self, api_key, id: str):
         try:
             key = self.db.decrypt_data(b64decode(api_key))
-            print(key)
             query = "{base}/user?key={api_key}&id={id}&striptags=true".format(
                 base=self._base_url, api_key=key, id=id)
-            print(query)
             with requests.request('GET', query) as response:
                 if response.status_code == 200:
                     return response.content

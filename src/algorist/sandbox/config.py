@@ -18,10 +18,11 @@ class SandBoxConfigDB:
         encrypted_api_key = client.encrypt_api_key(api_key)
         if len(self.db.table("default_api_key").all()) > 0:
             self.db.table("default_api_key").truncate()
+            self.db.table("default_api_key").remove()
         self.db.table("default_api_key").insert({"value": encrypted_api_key})
 
     def get_default_api_key(self):
-        if len(self.db.table("default_api_key").all()) is 0:
+        if len(self.db.table("default_api_key").all()) <= 0:
             raise Exception("No default api key is set")
         ret = self.db.table("default_api_key").all().pop().get("value")
         return ret

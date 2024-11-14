@@ -38,43 +38,54 @@ class Algorist(interactions.Client):
     @slash_command(name="e", description="Run sandboxed code", options=[slash_str_option(
         name="command", description="code to evaluate", required=True)])
     async def e(self, ctx: interactions.SlashContext, command: str):
-        client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
-        if ctx.guild != None and ctx.channel is not None:
-            ret = await client.call.execute(ctx.guild.id, ctx.channel.id, command)
-        else:
-            ret = await client.call.execute(1, 1, command)
-        client.close()
-        await client.wait_closed()
-        await ctx.send(str(ret))
+        try:
+            client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+            if ctx.guild != None and ctx.channel is not None:
+                ret = await client.call.execute(ctx.guild.id, ctx.channel.id, command)
+            else:
+                ret = await client.call.execute(1, 1, command)
+            client.close()
+            await client.wait_closed()
+            await ctx.send(ret.__repr__())
+        except Exception as e:
+            await ctx.send("An error occurred")
 
     @slash_command(name="default_torn_api_key", description="Sets default API key", options=[slash_str_option(
         name="api_key", description="the default api key to use for Torn", required=True)])
     async def default_torn_api_key(self, ctx: interactions.SlashContext, api_key: str):
-        client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
-        ret = await client.call.set_default_torn_api_key(api_key)
-        client.close()
-        await client.wait_closed()
-        await ctx.send(str(ret))
+        try:
+            client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+            ret = await client.call.set_default_torn_api_key(api_key)
+            client.close()
+            await client.wait_closed()
+            await ctx.send(str(ret))
+        except Exception as e:
+            await ctx.send("An error occurred")
 
     @slash_command(name="link_torn_user", description="Links Discord user to Torn user", options=[slash_str_option(
         name="torn_user_id", description="the torn user id to link", required=True), slash_str_option(
         name="discord_user", description="the discord user id to link", required=True)])
     async def link_torn_user(self, ctx: interactions.SlashContext, torn_user_id: str, discord_user_id: str):
-        client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
-        ret = await client.call.link_torn_user(torn_user_id, discord_user_id)
-        client.close()
-        await client.wait_closed()
-        await ctx.send(str(ret))
+        try:
+            client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+            ret = await client.call.link_torn_user(torn_user_id, discord_user_id)
+            client.close()
+            await client.wait_closed()
+            await ctx.send(str(ret))
+        except Exception as e:
+            await ctx.send("An error occurred")
 
     @slash_command(name="set_torn_api_key", description="Sets API key", options=[slash_str_option(
         name="api_key", description="the api key to use for Torn", required=True)])
     async def set_default_torn_api_key(self, ctx: interactions.SlashContext, api_key: str):
-        client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
-        ret = await client.call.store_default_api_key(api_key, ctx.author.user.id)
-        client.close()
-        await client.wait_closed()
-        await ctx.send(str(ret))
-
+        try:
+            client = await connect_rpc(connect=os.environ.get("SANDBOX_PROCESSOR_BIND_HOST"))
+            ret = await client.call.store_default_api_key(api_key, ctx.author.user.id)
+            client.close()
+            await client.wait_closed()
+            await ctx.send(str(ret))
+        except Exception as e:
+            await ctx.send("An error occurred")
 
 class BotProcessor(aiozmq.rpc.AttrHandler):
     def __init__(self, bot: Algorist):

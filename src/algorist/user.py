@@ -25,15 +25,18 @@ OTHER DEALINGS IN THE SOFTWARE.
 import json
 import os
 from tinydb import TinyDB
+from tinydb.table import Document
+
 from algorist.sandbox.config import SandBoxConfigDB
 import traceback
 import zerorpc
 from datetime import datetime
 
 class User:
-    def __init__(self, payload: str):
-        self.payload = json.loads(payload)
-        self.snapshot = str(datetime.now())
+    def __init__(self, payload: dict | Document):
+        self.payload = payload
+        if self.payload.get("snapshot") is None:
+            self.payload["snapshot"] = str(datetime.now())
 
     def is_error(self):
         if self.payload.get("error") is not None:
@@ -70,6 +73,10 @@ class User:
             "status").get(
             "description")
 
+    def snapshot(self):
+        return datetime(self.payload.get("snapshot"))
+
+
 class UserHOF:
     """
     When requesting selection with Limited,
@@ -77,7 +84,7 @@ class UserHOF:
     """
     def __init__(self, user, payload):
         self._user = user
-        self.payload = json.loads(payload)
+        self.payload = payload
 
     def attacks(self):
         return {
@@ -119,13 +126,13 @@ class UserDB:
             payload = client.get_user(key, id)
             if payload is None:
                 raise Exception("empty response")
-            u = User(payload)
+            u = User(json.loads(payload))
             if u.is_error():
                 raise Exception(u.payload.get("error"))
             self.save_user(u)
             path = "{path}/{id}".format(path=self.path, id=u.id())
             db = UserDB._get_db(path)
-            return [json.loads(index, object_hook=User) for index in db.table("user_objects").all()]
+            return [User(index) for index in db.table("user_objects").all()]
         except Exception as e:
             traceback.print_exception(e)
             return []
@@ -134,7 +141,7 @@ class UserDB:
         try:
             path = "{path}/{id}".format(path=self.path, id=user.id())
             db = UserDB._get_db(path)
-            db.table("user_objects").insert(user.__dict__)
+            db.table("user_objects").insert(user.payload)
         except Exception as e:
             traceback.print_exception(e)
 
