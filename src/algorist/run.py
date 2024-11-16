@@ -102,11 +102,11 @@ def bot():
     else:
         bot_processor_bind_host = os.environ.get("BOT_PROCESSOR_BIND_HOST")
     if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
-        sandbox_processor_bind_host = "tcp://127.0.0.1:19819"
+        raise Exception("SANDBOX_PROCESSOR_BIND_HOST environment variable not set")
     else:
         sandbox_processor_bind_host = os.environ.get("SANDBOX_PROCESSOR_BIND_HOST")
     if os.environ.get("CONTENT_PROCESSOR_BIND_HOST") is None:
-        content_processor_bind_host = "tcp://127.0.0.1:19821"
+        raise Exception("CONTENT_PROCESSOR_BIND_HOST environment variable not set")
     else:
         content_processor_bind_host = os.environ.get("CONTENT_PROCESSOR_BIND_HOST")
     discord_token = os.environ.get("DISCORD_TOKEN")
@@ -121,7 +121,7 @@ def processor():
     else:
         request_processor_bind_host = os.environ.get("REQUEST_PROCESSOR_BIND_HOST")
     if os.environ.get("REQUEST_PROCESSOR_CONFIG_DB_PATH") is None:
-        request_processor_config_db_path = "/tmp/algorist/config/request_processor/"
+        request_processor_config_db_path = "/srv/algorist/config/request_processor/"
     else:
         request_processor_config_db_path = os.environ.get("REQUEST_PROCESSOR_CONFIG_DB_PATH")
     t1 = threading.Thread(target=processor_inbox, args=(
@@ -136,7 +136,7 @@ def sandbox():
     else:
         sandbox_processor_bind_host = os.environ.get("SANDBOX_PROCESSOR_BIND_HOST")
     if os.environ.get("CONTENT_PROCESSOR_BIND_HOST") is None:
-        content_processor_bind_host = "tcp://127.0.0.1:19821"
+        raise Exception("CONTENT_PROCESSOR_BIND_HOST environment variable not set")
     else:
         content_processor_bind_host = os.environ.get("CONTENT_PROCESSOR_BIND_HOST")
     asyncio.get_event_loop().run_until_complete(sandbox_inbox(
@@ -149,18 +149,18 @@ def content():
     else:
         content_processor_bind_host = os.environ.get("CONTENT_PROCESSOR_BIND_HOST")
     if os.environ.get("REQUEST_PROCESSOR_BIND_HOST") is None:
-        request_processor_bind_host = "tcp://127.0.0.1:19822"
+        raise Exception("REQUEST_PROCESSOR_BIND_HOST environment variable not set")
     else:
         request_processor_bind_host = os.environ.get("REQUEST_PROCESSOR_BIND_HOST")
     if os.environ.get("CONTENT_PROCESSOR_CONFIG_DB_PATH") is None:
-        content_processor_config_db_path = "/tmp/algorist/config/content_processor/"
+        content_processor_config_db_path = "/srv/algorist/config/content_processor/"
     else:
         content_processor_config_db_path = os.environ.get("CONTENT_PROCESSOR_CONFIG_DB_PATH")
     if not os.access(content_processor_config_db_path, os.W_OK):
         raise Exception("CONTENT_PROCESSOR_CONFIG_DB_PATH isn't writable: {}".format(
             content_processor_config_db_path))
     if os.environ.get("USER_DB_PATH") is None:
-        user_db_path = "/tmp/algorist/db/user/"
+        user_db_path = "/srv/algorist/db/user/"
     else:
         user_db_path = os.environ.get("USER_DB_PATH")
     if not os.path.isdir(user_db_path):
