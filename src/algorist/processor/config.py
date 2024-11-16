@@ -28,20 +28,26 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad, pad
 from pbkdf2 import PBKDF2
 from tinydb import TinyDB
+from algorist.processor import module_logger
 
 class ConfigDB:
     def __init__(self, config_db_path):
         self.config_db_path = config_db_path
         self.db = TinyDB("{}/config.db".format(self.config_db_path))
+        module_logger.info("loaded configuration database: {}".format(
+            "{}/config.db".format(self.config_db_path)))
         if len(self.db.table("pbkdf2_key").all()) <= 0:
+            module_logger.info("creating encryption key for the first time")
             passwd = os.urandom(32)
             salt = os.urandom(32)
             iv = b64encode(os.urandom(16)).decode('utf-8')
             key = b64encode(PBKDF2(passwd, salt).read(32)).decode('utf-8')
             self.db.table("aes_iv").insert({"value": iv})
-            self.db.table("encryption_key").insert({"value": key})
+            self.db.table("pbkdf2_key").insert({"value": key})
+        else:
+            module_logger.info("encryption key already exists, not creating")
         self.iv = b64decode(self.db.table("aes_iv").all().pop().get("value"))
-        self.key = b64decode(self.db.table("encryption_key").all().pop().get("value"))
+        self.key = b64decode(self.db.table("pbkdf2_key").all().pop().get("value"))
 
     def decrypt_data(self, encrypted_value):
         cipher = AES.new(self.key, AES.MODE_CBC, self.iv)

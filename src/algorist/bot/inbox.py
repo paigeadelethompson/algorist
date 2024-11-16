@@ -24,8 +24,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import aiozmq
 from algorist.bot.service import BotProcessor
-
+from algorist.bot import module_logger
 
 async def inbox(bot, bind_host):
+    module_logger.info("Starting bot processor inbox, binding to host {}".format(bind_host))
     server = await aiozmq.rpc.serve_rpc(BotProcessor(bot), bind=bind_host)
+    module_logger.info("bot processor service bound and waiting for connections..")
     await server.wait_closed()

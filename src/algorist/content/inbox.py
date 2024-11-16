@@ -24,8 +24,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import zerorpc
 from algorist.content.service import ContentService
+from algorist.processor import module_logger
+import asyncio
 
-async def inbox(bind_host, request_processor_bind_host, config_db_path, user_db_path):
+def inbox(bind_host, request_processor_bind_host, config_db_path, user_db_path):
+    module_logger.info("starting content processor inbox")
     server = zerorpc.Server(ContentService(request_processor_bind_host, config_db_path, user_db_path))
+    module_logger.info("content service binding to {}".format(bind_host))
     server.bind(bind_host)
+    module_logger.info("content service bound, starting...")
     server.run()

@@ -26,10 +26,13 @@ import os
 import zerorpc
 from algorist.processor.config import ConfigDB
 from algorist.processor.service import TornV2API
+from algorist.processor import module_logger
 
-
-async def inbox(bind_host, config_path):
+def inbox(bind_host, config_path):
+    module_logger.info("starting request processor inbox")
     config = ConfigDB(config_path)
     server = zerorpc.Server(TornV2API(config))
+    module_logger.info("request processor service binding to {}".format(bind_host))
     server.bind(bind_host)
+    module_logger.info("content service bound, starting...")
     server.run()

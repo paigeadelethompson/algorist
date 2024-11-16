@@ -29,13 +29,14 @@ from tinydb import TinyDB
 from algorist.content.config import ContentConfigDB
 from algorist.content.user.hof import UserHOF
 from algorist.content.user.user import User
-
+from algorist.content.user import module_logger
 
 class UserDB:
     def __init__(self, request_processor_bind_host, config_db, user_db_path):
         self.config_db = config_db
         self.root_db_path = user_db_path
         self.request_processor_bind_host = request_processor_bind_host
+        module_logger.info("UserDB manager instantiated")
 
     def _get_db(path) -> TinyDB:
         return TinyDB(path)

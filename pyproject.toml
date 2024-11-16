@@ -24,6 +24,7 @@ interactions-py = "^5.13.2"
 zerorpc = "^0.6.3"
 requests = "^2.32.3"
 pycryptodome = "^3.21.0"
+colorlog = "^6.9.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -34,6 +35,7 @@ algorist-insecure = "algorist.run:insecure"
 algorist-processor = "algorist.run:processor"
 algorist-bot = "algorist.run:bot"
 algorist-sandbox = "algorist.run:sandbox"
+algorist-content = "algorist.run:content"
 
 [tool.pylint.messages_control]
 errors-only = true

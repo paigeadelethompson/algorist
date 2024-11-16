@@ -26,10 +26,11 @@ to a Torn ID to provide an API key and thus providing more insight into
 their account than can be obtained by the former.
 
 ## Design
-The bot is compartmentalized into 3 separate services: 
+The bot is compartmentalized into 4 separate services: 
 - The discord client
 - Request processor (Torn API requests, encryption/decryption operations)
-- The Sandbox (Python executive, local database storage & retrieval)
+- The Sandbox (Python executive for running user scripts)
+- The content database (local storage of Torn assets)
 
 In the process of setting API keys, the bot service sends the API key to 
 the sandbox service for storage. When storing the key, the sandbox service

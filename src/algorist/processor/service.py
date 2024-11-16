@@ -26,10 +26,11 @@ import traceback
 from base64 import b64encode, b64decode
 import requests
 from algorist.processor.config import ConfigDB
-
+from algorist.processor import module_logger
 
 class TornV2API(object):
     def __init__(self, db: ConfigDB):
+        module_logger.info("creating TornV2API request service")
         self._base_url = "https://api.torn.com/v2"
         self.db = db
 

@@ -25,12 +25,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 import os
 import zerorpc
 from tinydb import TinyDB
+from algorist.content import module_logger
 
 class ContentConfigDB:
     def __init__(self, request_processor_bind_host, config_db_path):
         self.config_db_path = config_db_path
         self.request_processor_bind_host = request_processor_bind_host
         self.db = TinyDB("{}/config.db".format(self.config_db_path))
+        module_logger.info("loaded content service configuration database")
+
 
     def store_default_api_key(self, api_key):
         client = zerorpc.Client()

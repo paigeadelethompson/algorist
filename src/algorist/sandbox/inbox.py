@@ -25,8 +25,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 import os
 from aiozmq.rpc import serve_rpc
 from algorist.sandbox.service import SandBoxService
-
+from algorist.sandbox import module_logger
 
 async def inbox(bind_host, content_processor_bind_host):
+    module_logger.info("sandbox service binding service to {}".format(bind_host))
     server = await serve_rpc(SandBoxService(content_processor_bind_host), bind=bind_host)
+    module_logger.info("sandbox service started, waiting for connections")
     await server.wait_closed()

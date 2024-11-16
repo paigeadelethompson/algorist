@@ -28,6 +28,7 @@ import interactions
 from aiozmq.rpc import connect_rpc
 from interactions import listen, slash_command, slash_str_option
 import interactions as discord
+from algorist.bot import module_logger
 
 class Algorist(interactions.Client):
     def __init__(self, sandbox_host, content_host):
@@ -39,7 +40,7 @@ class Algorist(interactions.Client):
 
     @listen()
     async def on_ready(self):
-        print(f'Logged on as {self.user}!')
+        module_logger.info(f'Logged on as {self.user}!')
         await self.change_presence(status=interactions.Status.ONLINE)
 
     @slash_command(name="e", description="Run sandboxed code", options=[slash_str_option(
@@ -47,7 +48,7 @@ class Algorist(interactions.Client):
     async def e(self, ctx: interactions.SlashContext, command: str):
         try:
             client = await connect_rpc(connect=self.sandbox_host)
-            if ctx.guild != None and ctx.channel is not None:
+            if ctx.guild is not None and ctx.channel is not None:
                 ret = await client.call.execute(ctx.guild.id, ctx.channel.id, command)
             else:
                 ret = await client.call.execute(1, 1, command)

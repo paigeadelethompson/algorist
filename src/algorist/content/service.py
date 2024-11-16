@@ -25,12 +25,14 @@ OTHER DEALINGS IN THE SOFTWARE.
 import traceback
 from algorist.content.config import ContentConfigDB
 from algorist.content.user.database import UserDB
-
+from algorist.content import module_logger
 
 class ContentService:
     def __init__(self, request_processor_bind_host, config_db_path, user_db_path):
+        module_logger.info("creating content service")
         self.config_db = ContentConfigDB(request_processor_bind_host, config_db_path)
         self.user_db = UserDB(request_processor_bind_host, self.config_db, user_db_path)
+        module_logger.info("content service ready")
 
     def set_default_torn_api_key(self, api_key):
         try:

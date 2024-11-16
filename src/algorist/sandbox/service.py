@@ -26,10 +26,11 @@ import traceback
 from aiozmq.rpc import AttrHandler, method
 from RestrictedPython import compile_restricted
 from algorist.sandbox.context import ExecutionContext
-
+from algorist.sandbox import module_logger
 
 class SandBoxService(AttrHandler):
     def __init__(self, content_processor_bind_host):
+        module_logger.info("Creating SandBox service")
         self.content_processor_bind_host = content_processor_bind_host
         self.ctx = {}
         super().__init__()
@@ -37,6 +38,10 @@ class SandBoxService(AttrHandler):
     async def get_context(self, guild, channel) -> ExecutionContext:
         hash_id = await ExecutionContext.hash_id(guild, channel)
         if self.ctx.get(hash_id) is None:
+            module_logger.info("New sandbox execution context requested: {} {} {}".format(
+                guild,
+                channel,
+                hash_id))
             self.ctx[hash_id] = ExecutionContext(
                 guild,
                 channel,
