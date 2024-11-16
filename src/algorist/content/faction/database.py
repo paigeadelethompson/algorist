@@ -22,15 +22,6 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
-import json
-import os
-
-from tinydb import TinyDB
-
-class Faction:
-    def __init__(self, payload, api_key=None):
-        self.payload = json.loads(payload)
-
 class FactionDB:
     def __init__(self):
         self.config_db_path = None

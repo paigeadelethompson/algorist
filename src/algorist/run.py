@@ -24,46 +24,150 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 import asyncio
 import os
-from algorist.processor import inbox as processor_inbox
-from algorist.sandbox.sandbox import inbox as sandbox_inbox
-from algorist.bot import Algorist
-from algorist.bot import inbox as bot_inbox
+from algorist.bot.service import Algorist
+from algorist.processor.inbox import inbox as processor_inbox
+from algorist.bot.inbox import inbox as bot_inbox
+from algorist.sandbox.inbox import inbox as sandbox_inbox
+from algorist.content.inbox import inbox as content_inbox
 import interactions as discord
 
-client = Algorist(
-    command_prefix=os.environ.get("DISCORD_BOT_PREFIX"),
-    help_command=None,
-    intents=discord.Intents.ALL)
-
-
-async def _bot():
+async def _insecure():
     if os.environ.get("DISCORD_TOKEN") is None:
         raise Exception("DISCORD_TOKEN environment variable not set")
+    discord_token = os.environ.get("DISCORD_TOKEN")
+    if os.environ.get("BOT_PROCESSOR_BIND_HOST") is None:
+        bot_processor_bind_host = "tcp://127.0.0.1:19818"
+    else:
+        bot_processor_bind_host = os.environ.get("BOT_PROCESSOR_BIND_HOST")
+    if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
+        sandbox_processor_bind_host = "tcp://127.0.0.1:19819"
+    else:
+        sandbox_processor_bind_host = os.environ.get("SANDBOX_PROCESSOR_BIND_HOST")
+    if os.environ.get("REQUEST_PROCESSOR_BIND_HOST") is None:
+        request_processor_bind_host = "tcp://127.0.0.1:19822"
+    else:
+        request_processor_bind_host = os.environ.get("REQUEST_PROCESSOR_BIND_HOST")
+    if os.environ.get("CONTENT_PROCESSOR_BIND_HOST") is None:
+        content_processor_bind_host = "tcp://127.0.0.1:19821"
+    else:
+        content_processor_bind_host = os.environ.get("CONTENT_PROCESSOR_BIND_HOST")
+    if os.environ.get("REQUEST_PROCESSOR_CONFIG_DB_PATH") is None:
+        request_processor_config_db_path = "/tmp/algorist/config/request_processor/"
+    else:
+        request_processor_config_db_path = os.environ.get("REQUEST_PROCESSOR_CONFIG_DB_PATH")
+    if not os.access(request_processor_config_db_path, os.W_OK):
+        raise Exception("CONFIG_DB_PATH isn't writable: {}".format(request_processor_config_db_path))
+    if os.environ.get("CONTENT_PROCESSOR_CONFIG_DB_PATH") is None:
+        content_processor_config_db_path = "/tmp/algorist/config/content_processor/"
+    else:
+        content_processor_config_db_path = os.environ.get("CONTENT_PROCESSOR_CONFIG_DB_PATH")
+    if not os.access(content_processor_config_db_path, os.W_OK):
+            raise Exception("CONTENT_PROCESSOR_CONFIG_DB_PATH isn't writable: {}".format(
+                content_processor_config_db_path))
+    if os.environ.get("USER_DB_PATH") is None:
+            user_db_path = "/tmp/algorist/db/user/"
+    else:
+        user_db_path = os.environ.get("USER_DB_PATH")
+    if not os.path.isdir(user_db_path):
+        raise Exception("USER_DB_PATH should be a directory")
+    if not os.access(user_db_path, os.W_OK):
+        raise Exception("USER_DB_PATH isn't writable")
+    client = Algorist(sandbox_processor_bind_host, content_processor_bind_host)
     async with asyncio.TaskGroup() as tg:
         await asyncio.gather(
-            client.astart(os.environ.get("DISCORD_TOKEN")),
-            tg.create_task(bot_inbox(bot=client)))
-
-
-async def _insecure():
-    async with asyncio.TaskGroup() as tg:
-        await asyncio.gather(
-            tg.create_task(sandbox_inbox()),
-            tg.create_task(processor_inbox()),
-            tg.create_task(_bot()))
+            tg.create_task(sandbox_inbox(
+                sandbox_processor_bind_host,
+                content_processor_bind_host)),
+            tg.create_task(processor_inbox(
+                request_processor_bind_host,
+                request_processor_config_db_path)),
+            tg.create_task(client.astart(discord_token)),
+            tg.create_task(bot_inbox(
+                client,
+                bot_processor_bind_host)),
+            tg.create_task(content_inbox(
+                content_processor_bind_host,
+                request_processor_bind_host,
+                content_processor_config_db_path,
+                user_db_path)))
 
 
 def insecure():
     asyncio.get_event_loop().run_until_complete(_insecure())
 
-
 def bot():
-    asyncio.get_event_loop().run_until_complete(_bot())
-
+    if os.environ.get("DISCORD_TOKEN") is None:
+        raise Exception("DISCORD_TOKEN environment variable not set")
+    if os.environ.get("BOT_PROCESSOR_BIND_HOST") is None:
+        bot_processor_bind_host = "tcp://127.0.0.1:19818"
+    else:
+        bot_processor_bind_host = os.environ.get("BOT_PROCESSOR_BIND_HOST")
+    if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
+        sandbox_processor_bind_host = "tcp://127.0.0.1:19819"
+    else:
+        sandbox_processor_bind_host = os.environ.get("SANDBOX_PROCESSOR_BIND_HOST")
+    if os.environ.get("CONTENT_PROCESSOR_BIND_HOST") is None:
+        content_processor_bind_host = "tcp://127.0.0.1:19821"
+    else:
+        content_processor_bind_host = os.environ.get("CONTENT_PROCESSOR_BIND_HOST")
+    discord_token = os.environ.get("DISCORD_TOKEN")
+    client = Algorist(sandbox_processor_bind_host, content_processor_bind_host)
+    asyncio.get_event_loop().run_until_complete(bot_inbox(
+                client,
+                bot_processor_bind_host))
 
 def processor():
-    asyncio.get_event_loop().run_until_complete(processor_inbox())
-
+    if os.environ.get("REQUEST_PROCESSOR_BIND_HOST") is None:
+        request_processor_bind_host = "tcp://127.0.0.1:19822"
+    else:
+        request_processor_bind_host = os.environ.get("REQUEST_PROCESSOR_BIND_HOST")
+    if os.environ.get("REQUEST_PROCESSOR_CONFIG_DB_PATH") is None:
+        request_processor_config_db_path = "/tmp/algorist/config/request_processor/"
+    else:
+        request_processor_config_db_path = os.environ.get("REQUEST_PROCESSOR_CONFIG_DB_PATH")
+    asyncio.get_event_loop().run_until_complete(processor_inbox(
+                request_processor_bind_host,
+                request_processor_config_db_path))
 
 def sandbox():
-    asyncio.get_event_loop().run_until_complete(sandbox_inbox())
+    if os.environ.get("SANDBOX_PROCESSOR_BIND_HOST") is None:
+        sandbox_processor_bind_host = "tcp://127.0.0.1:19819"
+    else:
+        sandbox_processor_bind_host = os.environ.get("SANDBOX_PROCESSOR_BIND_HOST")
+    if os.environ.get("CONTENT_PROCESSOR_BIND_HOST") is None:
+        content_processor_bind_host = "tcp://127.0.0.1:19821"
+    else:
+        content_processor_bind_host = os.environ.get("CONTENT_PROCESSOR_BIND_HOST")
+    asyncio.get_event_loop().run_until_complete(sandbox_inbox(
+                sandbox_processor_bind_host,
+                content_processor_bind_host))
+
+def content():
+    if os.environ.get("CONTENT_PROCESSOR_BIND_HOST") is None:
+        content_processor_bind_host = "tcp://127.0.0.1:19821"
+    else:
+        content_processor_bind_host = os.environ.get("CONTENT_PROCESSOR_BIND_HOST")
+    if os.environ.get("REQUEST_PROCESSOR_BIND_HOST") is None:
+        request_processor_bind_host = "tcp://127.0.0.1:19822"
+    else:
+        request_processor_bind_host = os.environ.get("REQUEST_PROCESSOR_BIND_HOST")
+    if os.environ.get("CONTENT_PROCESSOR_CONFIG_DB_PATH") is None:
+        content_processor_config_db_path = "/tmp/algorist/config/content_processor/"
+    else:
+        content_processor_config_db_path = os.environ.get("CONTENT_PROCESSOR_CONFIG_DB_PATH")
+    if not os.access(content_processor_config_db_path, os.W_OK):
+        raise Exception("CONTENT_PROCESSOR_CONFIG_DB_PATH isn't writable: {}".format(
+            content_processor_config_db_path))
+    if os.environ.get("USER_DB_PATH") is None:
+        user_db_path = "/tmp/algorist/db/user/"
+    else:
+        user_db_path = os.environ.get("USER_DB_PATH")
+    if not os.path.isdir(user_db_path):
+        raise Exception("USER_DB_PATH should be a directory")
+    if not os.access(user_db_path, os.W_OK):
+        raise Exception("USER_DB_PATH isn't writable")
+    content_inbox(
+        content_processor_bind_host,
+        request_processor_bind_host,
+        content_processor_config_db_path,
+        user_db_path)

@@ -22,23 +22,16 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 """
 
-from pbkdf2 import PBKDF2
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
-import zerorpc
-import requests
-from tinydb import TinyDB
 import os
 from base64 import b64encode, b64decode
-import traceback
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad, pad
+from pbkdf2 import PBKDF2
+from tinydb import TinyDB
 
 class ConfigDB:
-    def __init__(self):
-        if os.environ.get("CONFIG_DB_PATH") is None:
-            raise Exception("CONFIG_DB_PATH not set")
-        self.config_db_path = os.environ.get("CONFIG_DB_PATH")
-        if not os.access(self.config_db_path, os.W_OK):
-            raise Exception("CONFIG_DB_PATH isn't writable")
+    def __init__(self, config_db_path):
+        self.config_db_path = config_db_path
         self.db = TinyDB("{}/config.db".format(self.config_db_path))
         if len(self.db.table("pbkdf2_key").all()) <= 0:
             passwd = os.urandom(32)
@@ -61,39 +54,3 @@ class ConfigDB:
         padded_plaintext = pad(unencrypted_value.encode(), AES.block_size)
         ciphertext = cipher.encrypt(padded_plaintext)
         return ciphertext
-
-class TornV2API(object):
-    def __init__(self, db: ConfigDB):
-        self._base_url = "https://api.torn.com/v2"
-        self.db = db
-
-    def get_user(self, api_key, id: str):
-        try:
-            key = self.db.decrypt_data(b64decode(api_key))
-            query = "{base}/user?key={api_key}&id={id}&striptags=true".format(
-                base=self._base_url, api_key=key, id=id)
-            with requests.request('GET', query) as response:
-                if response.status_code == 200:
-                    return response.content
-                else:
-                    return None
-                    raise NotImplementedError("http status code {}".format(response.status_code))
-
-        except Exception as e:
-            traceback.print_exception(e)
-
-    def encrypt_api_key(self, user_api_key):
-        try:
-            return b64encode(self.db.encrypt_data(user_api_key)).decode('utf-8')
-        except Exception as e:
-            traceback.print_exception(e)
-
-
-async def inbox():
-    config = ConfigDB()
-    if os.environ.get("REQUEST_PROCESSOR_BIND_HOST") is None:
-        raise Exception("REQUEST_PROCESSOR_BIND_HOST not set")
-    bind_host = os.environ.get("REQUEST_PROCESSOR_BIND_HOST")
-    server = zerorpc.Server(TornV2API(config))
-    server.bind(bind_host)
-    server.run()

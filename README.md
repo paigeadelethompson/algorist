@@ -74,41 +74,21 @@ portal: https://discord.com/developers/applications/
 ## Development 
 Each of the three processes can be started on the same machine, start by entering the Python
 virtualenv:
-- `mkdir -p /tmp/algorist/db/{user,faction,config}`
-- `mkdir -p /tmp/algorist/db/config/{sandbox,processor}`
-- `chmod -R 777 /tmp/algorist`
 - `poetry shell`
 - `poetry install`
 
 Note: `/tmp` directories will not persist between reboots.
 - start the discord client
 ```
-DISCORD_TOKEN="xxxxxxxxx"                           \
-SANDBOX_PROCESSOR_BIND_HOST="tcp://127.0.0.1:19819" \
-BOT_PROCESSOR_BIND_HOST="tcp://127.0.0.1:19818"     \
-algorist-bot
-```
-- in another terminal run `poetry shell` from the project directory
-and start the sandbox:
-```
-USER_DB_PATH=/tmp/algorist/db/user                  \
-FACTION_DB_PATH=/tmp/algorist/db/faction            \
-CONFIG_DB_PATH=/tmp/algorist/db/config/sandbox      \
-REQUEST_PROCESSOR_BIND_HOST="tcp://127.0.0.1:19820" \
-SANDBOX_PROCESSOR_BIND_HOST="tcp://127.0.0.1:19819" \
-algorist-sandbox
-```
-- open a third terminal, run `poetry shell`, and start the request
-processor:
-```
-CONFIG_DB_PATH=/tmp/algorist/db/config/processor    \
-REQUEST_PROCESSOR_BIND_HOST="tcp://127.0.0.1:19820" \
-algorist-processor
+DISCORD_TOKEN="xxxxxxxxx" algorist-insecure
 ```
 
 ### Known problems
 - `aiozmq` evidently doesn't support TLS as of yet: https://github.com/aio-libs/aiozmq/issues/123
 . I can't ascertain whether the standard zeromq module for Python even supports this but will investigate further as needed.
+- There are two RPC libraries in use; `aiozmq` and `zerorpc`; the latter is synchronous, because of compatibility issues
+with RestrictedPython. 
+- RestrictedPython can't use asynchronous APIs
 
 ### TODO
 - support sending matplotlib graph from sandbox to Discord channel as an image
